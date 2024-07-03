@@ -66,7 +66,50 @@ async function pinecone(message) {
     throw error;
   }
 }
-
+router.get('/download/ytmp4', async (req, res, next) => {
+    var apikey = req.query.apikey
+    var url = req.query.url
+    if (!apikey) return res.json(loghandler.noapikey)
+    if (!url) return res.json({
+        status: false,
+        creator: `${creator}`,
+        message: "masukan parameter url"
+    })
+    const check = await cekKey(apikey);
+    if (!check) return res.status(403).send({
+        status: 403,
+        message: `apikey ${apikey} not found, please register first! https://${req.hostname}/users/signup`,
+        result: "error"
+    });
+    let limit = await isLimit(apikey);
+    if (limit) return res.status(403).send({
+        status: 403,
+        message: 'your limit has been exhausted, reset every 12 PM'
+    });
+    const {
+        id,
+        thumbnail,
+        video: _video,
+        title
+    } = await scr.youtubedlv2(url)
+    try {
+        for (let i in _video) {
+            video = _video[i]
+            let kin = await video.download()
+            res.json({
+                id: id,
+                thumbnail: thumbnail,
+                title: title,
+                size: video.fileSize,
+                download: kin
+            })
+        }
+    } catch {
+        console.log(e);
+        res.json(loghandler.error)
+    }
+    limitAdd(apikey);
+})
 // Fungsi untuk smartContract
 async function smartContract(message) {
   try {
